@@ -1,0 +1,128 @@
+# =================================================================
+# Example CI (Continuous Integration) Workflow
+# This workflow handles validation and testing of infrastructure code
+# =================================================================
+
+name: 'Example - CI Infrastructure Validation'
+
+# =================================================================
+# Trigger Configuration
+# - Runs on all pull requests to catch issues early
+# - Runs on all branch pushes for continuous validation
+# - Can be triggered manually from GitHub UI
+# =================================================================
+on:
+  pull_request:
+    branches: ['*']        # Run on PRs to any branch
+  push:
+    branches: ['*']        # Run on pushes to any branch
+  workflow_dispatch:       # Manual trigger option
+
+# =================================================================
+# Environment Variables
+# - Set logging level for better debugging
+# - Configure Terraform Cloud settings
+# =================================================================
+env:
+  TF_LOG: "INFO"                           # Terraform log level
+  TF_CLOUD_ORGANIZATION: "your-org-name"   # Your TF Cloud org
+  TF_WORKSPACE: "your-workspace"           # Your TF workspace
+
+# =================================================================
+# Jobs Configuration
+# =================================================================
+jobs:
+  validate:
+    name: 'Validate Infrastructure'
+    runs-on: ubuntu-latest    # Using Ubuntu runner for Linux tools
+
+    # Default settings for all steps
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform    # Set working directory
+
+    # =================================================================
+    # Sequential Steps for Validation
+    # =================================================================
+    steps:
+      # ----------------------------------------------------------------
+      # Step 1: Get Code
+      # - Checks out your repository code
+      # - Essential first step for access to your files
+      # ----------------------------------------------------------------
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ----------------------------------------------------------------
+      # Step 2: Setup Terraform
+      # - Installs specific version of Terraform
+      # - Configures credentials for Terraform Cloud
+      # ----------------------------------------------------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0    # Specify version
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      # ----------------------------------------------------------------
+      # Step 3: Initialize Terraform
+      # - Initializes working directory
+      # - Downloads required providers
+      # - Backend disabled for validation only
+      # ----------------------------------------------------------------
+      - name: Initialize Terraform
+        id: init
+        run: terraform init -backend=false
+
+      # ----------------------------------------------------------------
+      # Step 4: Format Check
+      # - Ensures consistent code style
+      # - Continues on error to report all issues
+      # ----------------------------------------------------------------
+      - name: Check Terraform Format
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      # ----------------------------------------------------------------
+      # Step 5: Configuration Validation
+      # - Checks for syntax errors
+      # - Validates resource configurations
+      # ----------------------------------------------------------------
+      - name: Validate Terraform Configuration
+        id: validate
+        run: terraform validate
+
+      # ----------------------------------------------------------------
+      # Step 6: Security Scan
+      # - Checks for security issues
+      # - Uses tfsec for security best practices
+      # ----------------------------------------------------------------
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        continue-on-error: true
+
+      # ----------------------------------------------------------------
+      # Step 7: Lint Check
+      # - Additional style and best practice checks
+      # - Uses TFLint for extended validation
+      # ----------------------------------------------------------------
+      - name: Run TFLint
+        uses: terraform-linters/setup-tflint@v3
+        continue-on-error: true
+
+      # ----------------------------------------------------------------
+      # Step 8: Results Summary
+      # - Reports results of all checks
+      # - Runs even if previous steps fail
+      # ----------------------------------------------------------------
+      - name: Post Validation Results
+        if: always()
+        run: |
+          echo "Format Check: ${{ steps.fmt.outcome }}"
+          echo "Validation: ${{ steps.validate.outcome }}"
+
+# =================================================================
+# End of CI Workflow
+# ================================================================= 
