@@ -2,25 +2,25 @@
 terraform {
   # Configure Terraform Cloud as the backend
   cloud {
-    organization = "rootguru-infotech"    # Your TFC org name
+    organization = "rootguru-infotech" # Your TFC org name
 
     workspaces {
-      name = "ec2-deployment"         # Your TFC workspace name
+      name = "ec2-deployment" # Your TFC workspace name
     }
   }
 
   # Specify required providers
   required_providers {
     aws = {
-      source  = "hashicorp/aws"       # Official AWS provider
-      version = "~> 5.0"             # Use version 5.x
+      source  = "hashicorp/aws" # Official AWS provider
+      version = "~> 5.0"        # Use version 5.x
     }
   }
 }
 
 # Configure AWS Provider
 provider "aws" {
-  region = var.aws_region             # Use region from variables
+  region = var.aws_region # Use region from variables
 }
 
 # Create VPC
